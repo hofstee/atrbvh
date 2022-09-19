@@ -39,21 +39,21 @@ using namespace FW;
 
 //------------------------------------------------------------------------
 
-const char* const       GLContext::s_defaultFontName    = "Arial";
-const S32               GLContext::s_defaultFontSize    = 16;
-const U32               GLContext::s_defaultFontStyle   = FontStyle_Bold;
+const char* const       GLContext::s_defaultFontName = "Arial";
+const S32               GLContext::s_defaultFontSize = 16;
+const U32               GLContext::s_defaultFontStyle = FontStyle_Bold;
 
-bool                    GLContext::s_inited             = false;
-HWND                    GLContext::s_shareHWND          = NULL;
-HDC                     GLContext::s_shareHDC           = NULL;
-HGLRC                   GLContext::s_shareHGLRC         = NULL;
-GLContext*              GLContext::s_headless           = NULL;
-GLContext*              GLContext::s_current            = NULL;
-bool                    GLContext::s_stereoAvailable    = false;
+bool                    GLContext::s_inited = false;
+HWND                    GLContext::s_shareHWND = NULL;
+HDC                     GLContext::s_shareHDC = NULL;
+HGLRC                   GLContext::s_shareHGLRC = NULL;
+GLContext* GLContext::s_headless = NULL;
+GLContext* GLContext::s_current = NULL;
+bool                    GLContext::s_stereoAvailable = false;
 
-GLContext::TempTexture  GLContext::s_tempTextures       = { &s_tempTextures, &s_tempTextures, 0, 0 };
+GLContext::TempTexture  GLContext::s_tempTextures = { &s_tempTextures, &s_tempTextures, 0, 0 };
 Hash<Vec2i, GLContext::TempTexture*>* GLContext::s_tempTexHash = NULL;
-S32                     GLContext::s_tempTexBytes       = 0;
+S32                     GLContext::s_tempTexBytes = 0;
 Hash<String, GLContext::Program*>* GLContext::s_programs = NULL;
 
 //------------------------------------------------------------------------
@@ -417,18 +417,18 @@ void GLContext::setFont(const String& name, int size, U32 style)
     FW_ASSERT(size > 0);
 
     LOGFONT lf;
-    lf.lfHeight         = size;
-    lf.lfWidth          = 0;
-    lf.lfEscapement     = 0;
-    lf.lfOrientation    = 0;
-    lf.lfWeight         = ((style & FontStyle_Bold) != 0) ? FW_BOLD : FW_NORMAL;
-    lf.lfItalic         = ((style & FontStyle_Italic) != 0);
-    lf.lfUnderline      = false;
-    lf.lfStrikeOut      = false;
-    lf.lfCharSet        = ANSI_CHARSET;
-    lf.lfOutPrecision   = OUT_DEFAULT_PRECIS;
-    lf.lfClipPrecision  = CLIP_DEFAULT_PRECIS;
-    lf.lfQuality        = PROOF_QUALITY;
+    lf.lfHeight = size;
+    lf.lfWidth = 0;
+    lf.lfEscapement = 0;
+    lf.lfOrientation = 0;
+    lf.lfWeight = ((style & FontStyle_Bold) != 0) ? FW_BOLD : FW_NORMAL;
+    lf.lfItalic = ((style & FontStyle_Italic) != 0);
+    lf.lfUnderline = false;
+    lf.lfStrikeOut = false;
+    lf.lfCharSet = ANSI_CHARSET;
+    lf.lfOutPrecision = OUT_DEFAULT_PRECIS;
+    lf.lfClipPrecision = CLIP_DEFAULT_PRECIS;
+    lf.lfQuality = PROOF_QUALITY;
     lf.lfPitchAndFamily = DEFAULT_PITCH | FF_DONTCARE;
     memcpy(lf.lfFaceName, name.getPtr(), name.getLength() + 1);
 
@@ -443,7 +443,7 @@ void GLContext::setFont(const String& name, int size, U32 style)
 
 Vec2i GLContext::getStringSize(const String& str)
 {
-   // Split the string into lines.
+    // Split the string into lines.
 
     Array<String> lines;
     str.split('\n', lines, true);
@@ -458,15 +458,15 @@ Vec2i GLContext::getStringSize(const String& str)
         if (!lines[i].getLength())
             lines[i] = " "; // To avoid lineSize.y being zero.
 
-    SIZE size;
-		if (!GetTextExtentPoint32(m_memdc, lines[i].getPtr(), lines[i].getLength(), &size))
-        failWin32Error("GetTextExtentPoint32");
+        SIZE size;
+        if (!GetTextExtentPoint32(m_memdc, lines[i].getPtr(), lines[i].getLength(), &size))
+            failWin32Error("GetTextExtentPoint32");
         Vec2i lineSize(size.cx + m_vgFontMetrics.tmOverhang, size.cy);
         strSize.x = max(strSize.x, lineSize.x);
         strSize.y += lineSize.y;
-}
+    }
 
-	return strSize;
+    return strSize;
 }
 
 //------------------------------------------------------------------------
@@ -761,11 +761,11 @@ void GLContext::staticDeinit(void)
     ReleaseDC(s_shareHWND, s_shareHDC);
     DestroyWindow(s_shareHWND);
 
-    s_shareHWND     = NULL;
-    s_shareHDC      = NULL;
-    s_shareHGLRC    = NULL;
-    s_headless      = NULL;
-    s_current       = NULL;
+    s_shareHWND = NULL;
+    s_shareHDC = NULL;
+    s_shareHGLRC = NULL;
+    s_headless = NULL;
+    s_current = NULL;
 }
 
 //------------------------------------------------------------------------
@@ -798,17 +798,45 @@ void GLContext::checkErrors(void)
 
 bool GLContext::choosePixelFormat(int& formatIdx, HDC hdc, const Config& config)
 {
+    // $$DM
+    // problem with new driver and wglChoosePixelFormatARB
+    // fixing by using ChoosePixelFormat instead
+#if 1
+    PIXELFORMATDESCRIPTOR pfd = {
+        sizeof(PIXELFORMATDESCRIPTOR),		//  size of this pfd  
+        1,									// version number  
+        PFD_DRAW_TO_WINDOW |				// support window  
+        PFD_SUPPORT_OPENGL |				// support OpenGL  
+        PFD_DOUBLEBUFFER |				// double buffered  
+        (config.isStereo ? PFD_STEREO : 0),	// stereo if enabled
+        PFD_TYPE_RGBA,						// RGBA type  
+        24,									// 24-bit color depth  
+        0, 0, 0, 0, 0, 0,					// color bits ignored  
+        0,									// no alpha buffer  
+        0,									// shift bit ignored  
+        0,									// no accumulation buffer  
+        0, 0, 0, 0,							// accum bits ignored  
+        32,									// 32-bit z-buffer      
+        8,									// 8-bit stencil
+        0,									// no auxiliary buffer  
+        PFD_MAIN_PLANE,						// main layer  
+        0,									// reserved  
+        0, 0, 0								// layer masks ignored  
+    };
+    formatIdx = ChoosePixelFormat(hdc, &pfd);
+    return formatIdx != 0;
+#else
     // Requirements.
 
     Array<Vec2i> reqs; // token, value
-    reqs.add(Vec2i(WGL_DRAW_TO_WINDOW_ARB,  1));
-    reqs.add(Vec2i(WGL_ACCELERATION_ARB,    WGL_FULL_ACCELERATION_ARB));
-    reqs.add(Vec2i(WGL_SUPPORT_OPENGL_ARB,  1));
-    reqs.add(Vec2i(WGL_DOUBLE_BUFFER_ARB,   1));
-    reqs.add(Vec2i(WGL_PIXEL_TYPE_ARB,      WGL_TYPE_RGBA_ARB));
-    reqs.add(Vec2i(WGL_DEPTH_BITS_ARB,      24));
-    reqs.add(Vec2i(WGL_STENCIL_BITS_ARB,    8));
-    reqs.add(Vec2i(WGL_STEREO_ARB,          (config.isStereo) ? 1 : 0));
+    reqs.add(Vec2i(WGL_DRAW_TO_WINDOW_ARB, 1));
+    reqs.add(Vec2i(WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB));
+    reqs.add(Vec2i(WGL_SUPPORT_OPENGL_ARB, 1));
+    reqs.add(Vec2i(WGL_DOUBLE_BUFFER_ARB, 1));
+    reqs.add(Vec2i(WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB));
+    reqs.add(Vec2i(WGL_DEPTH_BITS_ARB, 24));
+    reqs.add(Vec2i(WGL_STENCIL_BITS_ARB, 8));
+    reqs.add(Vec2i(WGL_STEREO_ARB, (config.isStereo) ? 1 : 0));
 
     if (config.numSamples > 1)
         reqs.add(Vec2i(WGL_SAMPLES_ARB, config.numSamples)); // WGL_ARB_multisample
@@ -818,14 +846,14 @@ bool GLContext::choosePixelFormat(int& formatIdx, HDC hdc, const Config& config)
     // Preferences.
 
     Array<Vec3i> prefs; // token, value, weight
-    prefs.add(Vec3i(WGL_RED_BITS_ARB,           8,  8));
-    prefs.add(Vec3i(WGL_GREEN_BITS_ARB,         8,  8));
-    prefs.add(Vec3i(WGL_BLUE_BITS_ARB,          8,  8));
-    prefs.add(Vec3i(WGL_ALPHA_BITS_ARB,         8,  0));
-    prefs.add(Vec3i(WGL_ACCUM_BITS_ARB,         0,  16));
-    prefs.add(Vec3i(WGL_AUX_BUFFERS_ARB,        0,  16));
-    prefs.add(Vec3i(WGL_NUMBER_OVERLAYS_ARB,    0,  16));
-    prefs.add(Vec3i(WGL_NUMBER_UNDERLAYS_ARB,   0,  16));
+    prefs.add(Vec3i(WGL_RED_BITS_ARB, 8, 8));
+    prefs.add(Vec3i(WGL_GREEN_BITS_ARB, 8, 8));
+    prefs.add(Vec3i(WGL_BLUE_BITS_ARB, 8, 8));
+    prefs.add(Vec3i(WGL_ALPHA_BITS_ARB, 8, 0));
+    prefs.add(Vec3i(WGL_ACCUM_BITS_ARB, 0, 16));
+    prefs.add(Vec3i(WGL_AUX_BUFFERS_ARB, 0, 16));
+    prefs.add(Vec3i(WGL_NUMBER_OVERLAYS_ARB, 0, 16));
+    prefs.add(Vec3i(WGL_NUMBER_UNDERLAYS_ARB, 0, 16));
 
     // Query formats that fulfill the requirements.
 
@@ -863,6 +891,7 @@ bool GLContext::choosePixelFormat(int& formatIdx, HDC hdc, const Config& config)
         }
     }
     return true;
+#endif
 }
 
 //------------------------------------------------------------------------
@@ -873,15 +902,15 @@ void GLContext::init(HDC hdc, HGLRC hglrc)
 
     // Initialize members.
 
-    m_hdc           = hdc;
-    m_hglrc         = hglrc;
+    m_hdc = hdc;
+    m_hglrc = hglrc;
 
-    m_viewPos       = 0;
-    m_viewSize      = 1;
-    m_viewScale     = 2.0f;
-    m_numAttribs    = 0;
+    m_viewPos = 0;
+    m_viewSize = 1;
+    m_viewScale = 2.0f;
+    m_numAttribs = 0;
 
-    m_vgFont        = NULL;
+    m_vgFont = NULL;
 
     // Setup text rendering.
 
@@ -932,22 +961,22 @@ void GLContext::drawVG(const VGVertex* vertices, int numVertices, U32 abgr)
         prog = new Program(
             FW_GL_SHADER_SOURCE(
                 uniform vec4 color;
-                attribute vec4 pos;
-                attribute float alpha;
-                varying vec4 shadedColor;
-                void main()
-                {
-                    gl_Position = pos;
-                    shadedColor = vec4(color.rgb, color.a * alpha);
-                }
-            ),
+        attribute vec4 pos;
+        attribute float alpha;
+        varying vec4 shadedColor;
+        void main()
+        {
+            gl_Position = pos;
+            shadedColor = vec4(color.rgb, color.a * alpha);
+        }
+        ),
             FW_GL_SHADER_SOURCE(
                 varying vec4 shadedColor;
-                void main()
-                {
-                    gl_FragColor = shadedColor;
-                }
-            ));
+        void main()
+        {
+            gl_FragColor = shadedColor;
+        }
+        ));
         setProgram(progId, prog);
     }
 
@@ -997,23 +1026,23 @@ const Vec2i& GLContext::uploadString(const String& str, const Vec2i& strSize)
     // Create word-oriented DIB.
 
     U8 bmi[sizeof(BITMAPINFOHEADER) + 3 * sizeof(DWORD)];
-    BITMAPINFOHEADER* bmih  = (BITMAPINFOHEADER*)bmi;
-    DWORD* masks            = (DWORD*)(bmih + 1);
+    BITMAPINFOHEADER* bmih = (BITMAPINFOHEADER*)bmi;
+    DWORD* masks = (DWORD*)(bmih + 1);
 
-    bmih->biSize            = sizeof(BITMAPINFOHEADER);
-    bmih->biWidth           = strSize.x;
-    bmih->biHeight          = strSize.y;
-    bmih->biPlanes          = 1;
-    bmih->biBitCount        = 32;
-    bmih->biCompression     = BI_BITFIELDS;
-    bmih->biSizeImage       = 0;
-    bmih->biXPelsPerMeter   = 0;
-    bmih->biYPelsPerMeter   = 0;
-    bmih->biClrUsed         = 0;
-    bmih->biClrImportant    = 0;
-    masks[0]                = 0x00FF0000;
-    masks[1]                = 0x0000FF00;
-    masks[2]                = 0x000000FF;
+    bmih->biSize = sizeof(BITMAPINFOHEADER);
+    bmih->biWidth = strSize.x;
+    bmih->biHeight = strSize.y;
+    bmih->biPlanes = 1;
+    bmih->biBitCount = 32;
+    bmih->biCompression = BI_BITFIELDS;
+    bmih->biSizeImage = 0;
+    bmih->biXPelsPerMeter = 0;
+    bmih->biYPelsPerMeter = 0;
+    bmih->biClrUsed = 0;
+    bmih->biClrImportant = 0;
+    masks[0] = 0x00FF0000;
+    masks[1] = 0x0000FF00;
+    masks[2] = 0x000000FF;
 
     void* buffer;
     HBITMAP dib = CreateDIBSection(m_memdc, (BITMAPINFO*)bmi, DIB_RGB_COLORS, &buffer, NULL, 0);
@@ -1077,28 +1106,28 @@ void GLContext::drawString(const Vec4f& pos, const Vec2i& strSize, const Vec2i& 
         prog = new GLContext::Program(
             FW_GL_SHADER_SOURCE(
                 attribute vec4 posAttrib;
-                attribute vec2 texAttrib;
-                varying vec2 texVarying;
+        attribute vec2 texAttrib;
+        varying vec2 texVarying;
 
-                void main()
-                {
-                    gl_Position = posAttrib;
-                    texVarying = texAttrib;
-                }
-            ),
+        void main()
+        {
+            gl_Position = posAttrib;
+            texVarying = texAttrib;
+        }
+        ),
             FW_GL_SHADER_SOURCE(
                 uniform sampler2D texSampler;
-                uniform vec4 colorUniform;
-                uniform float brightnessUniform;
-                varying vec2 texVarying;
+        uniform vec4 colorUniform;
+        uniform float brightnessUniform;
+        varying vec2 texVarying;
 
-                void main()
-                {
-                    vec4 tex = texture2D(texSampler, texVarying);
-                    float alpha = mix(1.0 - max(tex.x, tex.w), tex.y, brightnessUniform);
-                    gl_FragColor = vec4(colorUniform.xyz, colorUniform.w * alpha);
-                }
-            ));
+        void main()
+        {
+            vec4 tex = texture2D(texSampler, texVarying);
+            float alpha = mix(1.0 - max(tex.x, tex.w), tex.y, brightnessUniform);
+            gl_FragColor = vec4(colorUniform.xyz, colorUniform.w * alpha);
+        }
+        ));
         setProgram(progId, prog);
     }
 
@@ -1216,22 +1245,22 @@ void GLContext::drawTexture(int unit, const Vec4f& posLo, const Vec2f& posHi, co
         prog = new GLContext::Program(
             FW_GL_SHADER_SOURCE(
                 attribute vec4 posAttrib;
-                attribute vec2 texAttrib;
-                varying vec2 texVarying;
-                void main()
-                {
-                    gl_Position = posAttrib;
-                    texVarying = texAttrib;
-                }
-            ),
+        attribute vec2 texAttrib;
+        varying vec2 texVarying;
+        void main()
+        {
+            gl_Position = posAttrib;
+            texVarying = texAttrib;
+        }
+        ),
             FW_GL_SHADER_SOURCE(
                 uniform sampler2D texSampler;
-                varying vec2 texVarying;
-                void main()
-                {
-                    gl_FragColor = texture2D(texSampler, texVarying);
-                }
-            ));
+        varying vec2 texVarying;
+        void main()
+        {
+            gl_FragColor = texture2D(texSampler, texVarying);
+        }
+        ));
         setProgram(progId, prog);
     }
 

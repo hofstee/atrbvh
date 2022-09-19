@@ -12,7 +12,7 @@
 #define WARP_SYNC \
 do { \
     int _sync = 0; \
-    __shfl(_sync, 0); \
+    __shfl_sync(0xFFFFFFFF, _sync, 0); \
 } while (0)
 #else
 #define WARP_SYNC \
@@ -53,9 +53,9 @@ do { \
 // Read a vector of 3 elements using shuffle operations
 #define SHFL_FLOAT3(destination, source, index) \
 do { \
-    (destination).x = __shfl((source)[0], (index)); \
-    (destination).y = __shfl((source)[1], (index)); \
-    (destination).z = __shfl((source)[2], (index)); \
+    (destination).x = __shfl_sync(0xFFFFFFFF, (source)[0], (index)); \
+    (destination).y = __shfl_sync(0xFFFFFFFF, (source)[1], (index)); \
+    (destination).z = __shfl_sync(0xFFFFFFFF, (source)[2], (index)); \
 } while (0);
 
 namespace BVHRT

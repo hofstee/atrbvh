@@ -25,8 +25,8 @@ __forceinline__ __device__ void findLeafToExpand(int numberOfElements, int& inde
     int shflAmount = numberOfElements / 2;
     while (numberOfElements > 1)
     {
-        int otherIndex = __shfl_down(index, shflAmount);
-        float otherArea = __shfl_down(area, shflAmount);
+        int otherIndex = __shfl_down_sync(0xFFFFFFFF, index, shflAmount);
+        float otherArea = __shfl_down_sync(0xFFFFFFFF, area, shflAmount);
 
         if (otherArea > area)
         {

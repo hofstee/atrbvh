@@ -67,8 +67,8 @@ __device__ void findMinimum(int numberOfElements, int& index, float& distance)
     int shflAmount = numberOfElements / 2;
     while (numberOfElements > 1)
     {
-        int otherIndex = __shfl_down(index, shflAmount);
-        float otherArea = __shfl_down(distance, shflAmount);
+        int otherIndex = __shfl_down_sync(0xFFFFFFFF, index, shflAmount);
+        float otherArea = __shfl_down_sync(0xFFFFFFFF, distance, shflAmount);
 
         if (otherArea < distance)
         {
@@ -95,7 +95,7 @@ __device__ void findMinimumDistance(float* distancesMatrix, int lastRow, int& mi
         }
     }
     findMinimum(WARP_SIZE, minIndex, minDistance);
-    minIndex = __shfl(minIndex, 0);
+    minIndex = __shfl_sync(0xFFFFFFFF, minIndex, 0);
 }
 
 __device__ void updateState(int joinRow, int joinCol, int lastRow, int& threadNode, 
@@ -106,9 +106,9 @@ __device__ void updateState(int joinRow, int joinCol, int lastRow, int& threadNo
     // and the bounding boxes must be read outside the conditional or else __shfl is 
     // not going to work
     float3 bbMinA, bbMaxA, bbMinB, bbMaxB;
-    float sah = __shfl(threadSah, joinRow) + __shfl(threadSah, joinCol);
-    int leftIndex = __shfl(threadNode, joinRow);
-    int rightIndex = __shfl(threadNode, joinCol);
+    float sah = __shfl_sync(0xFFFFFFFF, threadSah, joinRow) + __shfl_sync(0xFFFFFFFF, threadSah, joinCol);
+    int leftIndex = __shfl_sync(0xFFFFFFFF, threadNode, joinRow);
+    int rightIndex = __shfl_sync(0xFFFFFFFF, threadNode, joinCol);
     SHFL_FLOAT3(bbMinA, bbMin, joinRow);
     SHFL_FLOAT3(bbMaxA, bbMax, joinRow);
     SHFL_FLOAT3(bbMinB, bbMin, joinCol);
@@ -127,8 +127,8 @@ __device__ void updateState(int joinRow, int joinCol, int lastRow, int& threadNo
     // Update 'joinRow' node and bounding box. The last block only modified 'joinCol', 
     // which won't conflict with this block, so we can synchronize only once after 
     // both blocks
-    int lastIndex = __shfl(threadNode, lastRow);
-    float sahLast = __shfl(threadSah, lastRow);
+    int lastIndex = __shfl_sync(0xFFFFFFFF, threadNode, lastRow);
+    float sahLast = __shfl_sync(0xFFFFFFFF, threadSah, lastRow);
     SHFL_FLOAT3(bbMinB, bbMin, lastRow);
     SHFL_FLOAT3(bbMaxB, bbMax, lastRow);
     if (THREAD_WARP_INDEX == joinRow)
@@ -250,7 +250,7 @@ __global__ void agglomerativeTreeletKernel(unsigned int numberOfTriangles, BVHTr
         currentNodeIndex = -1;
     }
     
-    while (__ballot(currentNodeIndex >= 0) != 0)
+    while (__ballot_sync(0xFFFFFFFF, currentNodeIndex >= 0) != 0)
     {
         // Number of threads who already have processed the current node
         unsigned int counter = 0;
@@ -289,7 +289,7 @@ __global__ void agglomerativeTreeletKernel(unsigned int numberOfTriangles, BVHTr
         // Check which threads in the warp have treelets to be processed. We are only going to 
         // process a treelet if the current node is the root of a subtree with at least gamma 
         // triangles
-        unsigned int vote = __ballot(triangleCount >= gamma);
+        unsigned int vote = __ballot_sync(0xFFFFFFFF, triangleCount >= gamma);
 
         while (vote != 0)
         {
@@ -300,7 +300,7 @@ __global__ void agglomerativeTreeletKernel(unsigned int numberOfTriangles, BVHTr
 
             // Get the treelet root by reading the corresponding thread's currentNodeIndex private 
             // variable
-            int treeletRootIndex = __shfl(currentNodeIndex, rootThreadIndex);
+            int treeletRootIndex = __shfl_sync(0xFFFFFFFF, currentNodeIndex, rootThreadIndex);
 
             formTreelet(treeletRootIndex, numberOfTriangles, tree, treeletSize,
                     WARP_ARRAY(treeletInternalNodes, treeletSize - 1),
@@ -431,7 +431,7 @@ void agglomerativeSmallTreeletKernel(unsigned int numberOfTriangles, BVHTree* tr
         currentNodeIndex = -1;
     }
 
-    while (__ballot(currentNodeIndex >= 0) != 0)
+    while (__ballot_sync(0xFFFFFFFF, currentNodeIndex >= 0) != 0)
     {
         // Number of threads who already have processed the current node
         unsigned int counter = 0;
@@ -470,7 +470,7 @@ void agglomerativeSmallTreeletKernel(unsigned int numberOfTriangles, BVHTree* tr
         // Check which threads in the warp have treelets to be processed. We are only going to 
         // process a treelet if the current node is the root of a subtree with at least gamma 
         // triangles
-        unsigned int vote = __ballot(triangleCount >= gamma);
+        unsigned int vote = __ballot_sync(0xFFFFFFFF, triangleCount >= gamma);
 
         while (vote != 0)
         {
@@ -479,7 +479,7 @@ void agglomerativeSmallTreeletKernel(unsigned int numberOfTriangles, BVHTree* tr
 
             // Get the treelet root by reading the corresponding thread's currentNodeIndex private 
             // variable
-            int treeletRootIndex = __shfl(currentNodeIndex, rootThreadIndex);
+            int treeletRootIndex = __shfl_sync(0xFFFFFFFF, currentNodeIndex, rootThreadIndex);
 
             formTreelet(treeletRootIndex, numberOfTriangles, tree, treeletSize,
                     WARP_ARRAY(treeletInternalNodes, treeletSize - 1),

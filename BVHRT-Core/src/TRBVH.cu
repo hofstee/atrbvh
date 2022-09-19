@@ -24,8 +24,8 @@ __device__ void reduceOptimal(float& optimalCost, int& optimalMask, int numberOf
 {
     for (int i = numberOfValues >> 1; i > 0; i = (i >> 1))
     {
-        float otherValue = __shfl_down(optimalCost, i);
-        int otherMask = __shfl_down(optimalMask, i);
+        float otherValue = __shfl_down_sync(0xFFFFFFFF, optimalCost, i);
+        int otherMask = __shfl_down_sync(0xFFFFFFFF, optimalMask, i);
         if (otherValue < optimalCost)
         {
             optimalCost = otherValue;
@@ -373,7 +373,7 @@ treeletReestructureKernel(unsigned int numberOfTriangles, BVHTree* tree,
         currentNodeIndex = -1;
     }
 
-    while (__ballot(currentNodeIndex >= 0) != 0)
+    while (__ballot_sync(0xFFFFFFFF, currentNodeIndex >= 0) != 0)
     {
         // Number of threads who already have processed the current node
         unsigned int counter = 0;
@@ -412,7 +412,7 @@ treeletReestructureKernel(unsigned int numberOfTriangles, BVHTree* tree,
         // Check which threads in the warp have treelets to be processed. We are only going to 
         // process a treelet if the current node is the root of a subtree with at least gamma 
         // triangles
-        unsigned int vote = __ballot(triangleCount >= gamma);
+        unsigned int vote = __ballot_sync(0xFFFFFFFF, triangleCount >= gamma);
 
         while (vote != 0)
         {
@@ -421,7 +421,7 @@ treeletReestructureKernel(unsigned int numberOfTriangles, BVHTree* tree,
 
             // Get the treelet root by reading the corresponding thread's currentNodeIndex private 
             // variable
-            int treeletRootIndex = __shfl(currentNodeIndex, rootThreadIndex);
+            int treeletRootIndex = __shfl_sync(0xFFFFFFFF, currentNodeIndex, rootThreadIndex);
             
             formTreelet(treeletRootIndex, numberOfTriangles, tree, treeletSize, 
                     WARP_ARRAY(treeletInternalNodes, treeletSize - 1), 
