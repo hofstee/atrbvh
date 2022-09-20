@@ -608,11 +608,11 @@ __forceinline__ __host__ __device__ unsigned long long int expandBits64(
 {
     unsigned long long int expanded = value;
     expanded &= 0x1fffff;
-    expanded = (expanded | expanded << 32) & 0x1f00000000ffff;
-    expanded = (expanded | expanded << 16) & 0x1f0000ff0000ff;
-    expanded = (expanded | expanded << 8) & 0x100f00f00f00f00f;
-    expanded = (expanded | expanded << 4) & 0x10c30c30c30c30c3;
-    expanded = (expanded | expanded << 2) & 0x1249249249249249;
+    expanded = (expanded | expanded << 32) & 0xffff00000000ffff;
+    expanded = (expanded | expanded << 16) & 0x00ff0000ff0000ff;
+    expanded = (expanded | expanded << 8)  & 0xf00f00f00f00f00f;
+    expanded = (expanded | expanded << 4)  & 0x30c30c30c30c30c3;
+    expanded = (expanded | expanded << 2)  & 0x9249249249249249;
 
     return expanded;
 }
