@@ -12,15 +12,16 @@ namespace BVHRT
 template <typename T> float DeviceSort(unsigned int numberOfElements, T** keysIn, T** keysOut,
                  unsigned int** valuesIn, unsigned int** valuesOut)
 {
-    cub::DoubleBuffer<T> keysBuffer(*keysIn, *keysOut);
-    cub::DoubleBuffer<unsigned int> valuesBuffer(*valuesIn, *valuesOut);
+    //cub::DoubleBuffer<T> keysBuffer(*keysIn, *keysOut);
+    //cub::DoubleBuffer<unsigned int> valuesBuffer(*valuesIn, *valuesOut);
 
     // Check how much temporary memory will be required
     void* tempStorage = nullptr;
     size_t storageSize = 0;
     // cub::DeviceRadixSort::SortPairs(tempStorage, storageSize, keysBuffer, valuesBuffer,
     // numberOfElements);
-    cub::DeviceRadixSort::SortKeys(tempStorage, storageSize, keysBuffer, numberOfElements);
+    //cub::DeviceRadixSort::SortKeys(tempStorage, storageSize, keysBuffer, numberOfElements);
+    cub::DeviceRadixSort::SortKeys(tempStorage, storageSize, *keysIn, *keysOut, numberOfElements);
 
     // Allocate temporary memory
     cudaMalloc(&tempStorage, storageSize);
@@ -34,8 +35,10 @@ template <typename T> float DeviceSort(unsigned int numberOfElements, T** keysIn
 #endif
 
     // Sort
-    cub::DeviceRadixSort::SortPairs(tempStorage, storageSize, keysBuffer, valuesBuffer,
-                                    numberOfElements);
+    //cub::DeviceRadixSort::SortPairs(tempStorage, storageSize, keysBuffer, valuesBuffer,
+    //    numberOfElements);
+    cub::DeviceRadixSort::SortPairs(tempStorage, storageSize, *keysIn, *keysOut, *valuesIn, *valuesOut,
+        numberOfElements);
 
 #ifdef MEASURE_EXECUTION_TIMES
     cudaEventRecord(stop, 0);
@@ -46,17 +49,17 @@ template <typename T> float DeviceSort(unsigned int numberOfElements, T** keysIn
     // Free temporary memory
     cudaFree(tempStorage);
 
-    // Update out buffers
-    T* current = keysBuffer.Current();
-    keysOut = &current;
-    unsigned int* current2 = valuesBuffer.Current();
-    valuesOut = &current2;
+    //// Update out buffers
+    //T* current = keysBuffer.Current();
+    //keysOut = &current;
+    //unsigned int* current2 = valuesBuffer.Current();
+    //valuesOut = &current2;
 
-    // Update in buffers
-    current = keysBuffer.d_buffers[1 - keysBuffer.selector];
-    keysIn = &current;
-    current2 = valuesBuffer.d_buffers[1 - valuesBuffer.selector];
-    valuesIn = &current2;
+    //// Update in buffers
+    //current = keysBuffer.d_buffers[1 - keysBuffer.selector];
+    //keysIn = &current;
+    //current2 = valuesBuffer.d_buffers[1 - valuesBuffer.selector];
+    //valuesIn = &current2;
 
     return elapsedTime;
 }

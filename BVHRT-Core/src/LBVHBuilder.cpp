@@ -113,7 +113,7 @@ template <typename T> BVHTree* LBVHBuilder::BuildTreeNoTriangleSplitting(
     else
     {
         std::cout << std::endl << "LBVH32" << std::endl;
-    }    
+    }
     std::cout << "\tBuild time: " << timer.ElapsedTime() << " ms" << std::endl;
     std::cout << "\tSAH: " << hostTree->SAH() << std::endl;
     std::cout << "\tKernel execution times:" << std::endl;
